@@ -2,39 +2,34 @@ locals {
   cluster_name = var.CLUSTER_NAME
 }
 
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.0"
+resource "azurerm_resource_group" "aks-rs" {
+  name     = "aks-example"
+  location = var.LOCATION
+}
 
-  cluster_name    = local.cluster_name
-  cluster_version = "1.27"
+resource "azurerm_kubernetes_cluster" "aks" {
+  name                = local.cluster_name
+  location            = azurerm_resource_group.aks-rs.location
+  resource_group_name = azurerm_resource_group.aks-rs.name
+  dns_prefix          = local.cluster_name
 
-  vpc_id                         = module.vpc.vpc_id
-  subnet_ids                     = module.vpc.private_subnets
-  cluster_endpoint_public_access = true
-
-  eks_managed_node_group_defaults = {
-    ami_type = "AL2_x86_64"
+  default_node_pool {
+    name                        = "default"
+    vm_size                     = "Standard_B2as_v2"
+    enable_auto_scaling         = true
+    min_count                   = 1
+    max_count                   = 3
+    os_disk_size_gb             = 32
+    temporary_name_for_rotation = "tempnodepool"
   }
 
-  eks_managed_node_groups = {
-    one = {
-      name = "node-group-1"
+  identity {
+    type = "SystemAssigned"
+  }
 
-      instance_types = ["t3.small"]
-
-      min_size     = 1
-      max_size     = 3
-      desired_size = 2
-    }
-
-    two = {
-      name           = "node-group-2"
-      instance_types = ["t3.small"]
-      min_size       = 1
-      max_size       = 2
-      desired_size   = 1
-    }
+  tags = {
+    Environment = "Production"
+    Project     = "learning-devops"
   }
 }
 
@@ -42,4 +37,11 @@ resource "kubernetes_namespace" "srgrcp" {
   metadata {
     name = "srgrcp"
   }
+}
+
+resource "helm_release" "nginx_ingress" {
+  name       = "nginx-ingress"
+  repository = "https://kubernetes.github.io/ingress-nginx"
+  chart      = "ingress-nginx"
+  namespace  = "kube-system"
 }

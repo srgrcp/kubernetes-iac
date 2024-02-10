@@ -1,7 +1,8 @@
 terraform {
-  backend "s3" {
-    bucket = "srgrcp-terraform-00"
-    key    = "terraform/kubernetes-iac.tfstate"
-    region = "us-east-1"
+  backend "azurerm" {
+    resource_group_name  = "tfstate"
+    storage_account_name = "tfstate74ong"
+    container_name       = "tfstate"
+    key                  = "jenkins.tfstate"
   }
 }

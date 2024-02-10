@@ -1,5 +1,5 @@
-variable "REGION" {
-  default = "us-east-1"
+variable "LOCATION" {
+  default = "East US 2"
 }
 
 variable "CLUSTER_NAME" {

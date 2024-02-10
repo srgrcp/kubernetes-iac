@@ -1,15 +1,31 @@
-provider "aws" {
-  region = var.REGION
+provider "azurerm" {
+  features {}
 }
 
 provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  host                   = azurerm_kubernetes_cluster.aks.kube_config.0.host
+  client_certificate     = base64decode(azurerm_kubernetes_cluster.aks.kube_config.0.client_certificate)
+  client_key             = base64decode(azurerm_kubernetes_cluster.aks.kube_config.0.client_key)
+  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.aks.kube_config.0.cluster_ca_certificate)
 
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "aws"
-    # This requires the awscli to be installed locally where Terraform is executed
-    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    command     = "az"
+    args        = ["aks", "get-credentials", "--resource-group", azurerm_resource_group.aks-rs.name, "--name", azurerm_kubernetes_cluster.aks.name]
+  }
+}
+
+provider "helm" {
+  kubernetes {
+    host = azurerm_kubernetes_cluster.aks.kube_config.0.host
+    client_certificate = base64decode(
+      azurerm_kubernetes_cluster.aks.kube_config.0.client_certificate
+    )
+    client_key = base64decode(
+      azurerm_kubernetes_cluster.aks.kube_config.0.client_key
+    )
+    cluster_ca_certificate = base64decode(
+      azurerm_kubernetes_cluster.aks.kube_config.0.cluster_ca_certificate
+    )
   }
 }
