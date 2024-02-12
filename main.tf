@@ -45,4 +45,9 @@ resource "helm_release" "nginx_ingress" {
   chart            = "ingress-nginx"
   namespace        = "ingress-nginx"
   create_namespace = true
+
+  set {
+    name  = "controller.service.externalTrafficPolicy"
+    value = "Local"
+  }
 }
