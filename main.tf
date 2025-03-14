@@ -33,12 +33,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 }
 
-resource "kubernetes_namespace" "srgrcp" {
-  metadata {
-    name = "srgrcp"
-  }
-}
-
 resource "helm_release" "nginx_ingress" {
   name             = "ingress-nginx"
   repository       = "https://kubernetes.github.io/ingress-nginx"
@@ -49,5 +43,60 @@ resource "helm_release" "nginx_ingress" {
   set {
     name  = "controller.service.externalTrafficPolicy"
     value = "Local"
+  }
+}
+
+resource "kubernetes_storage_class_v1" "azure-storage-class" {
+  metadata {
+    name = "azure-standard-ssd"
+  }
+
+  storage_provisioner = "disk.csi.azure.com"
+  parameters = {
+    skuName = "StandardSSD_LRS"
+  }
+  reclaim_policy         = "Delete"
+  allow_volume_expansion = true
+}
+
+resource "kubernetes_namespace" "prometheus" {
+  metadata {
+    name = "prometheus"
+  }
+}
+
+resource "helm_release" "kube-prometheus-stack" {
+  name             = "kube-prometheus-stack"
+  repository       = "https://prometheus-community.github.io/helm-charts"
+  chart            = "kube-prometheus-stack"
+  namespace        = kubernetes_namespace.prometheus.metadata.0.name
+  create_namespace = true
+
+}
+
+resource "kubernetes_ingress_v1" "grafana-ingress" {
+  metadata {
+    name      = "grafana-ingress"
+    namespace = kubernetes_namespace.prometheus.metadata.0.name
+  }
+
+  spec {
+    ingress_class_name = "nginx"
+    rule {
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = "kube-prometheus-stack-grafana"
+              port {
+                number = 80
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
